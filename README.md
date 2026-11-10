@@ -2,7 +2,8 @@
 
 Laravel-kompatibilis `dd()` és `dump()` a Yii 2-höz. A hívás és a leállás ugyanaz, mint Laravelben: a Symfony VarDumper felülete, weben HTTP 500, utána kilépés 1-es kóddal.
 
-Csomag: `bladeknigt89/yii2-dd`  
+Csomag: [`bladeknigt89/yii2-dd`](https://packagist.org/packages/bladeknigt89/yii2-dd)  
+Stabil kiadás: `v1.0.0`  
 Forrás: https://github.com/bladeknigt89/yii2-dd  
 Licenc: BSD-3-Clause
 
@@ -14,25 +15,13 @@ Licenc: BSD-3-Clause
 
 ## Telepítés
 
-A csomag még nincs a Packagisten. A projekt `composer.json`-jába kerül a tároló, utána a require:
-
-```json
-{
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/bladeknigt89/yii2-dd"
-        }
-    ],
-    "require": {
-        "bladeknigt89/yii2-dd": "^1.0"
-    }
-}
-```
+A csomag a Packagisten van, a stabil vonal az `1.0`:
 
 ```bash
-composer update bladeknigt89/yii2-dd
+composer require bladeknigt89/yii2-dd
 ```
+
+Ez a `^1.0` megszorítást írja a projekt `composer.json` fájljába, és a `v1.0.0` kiadást telepíti.
 
 Yii2 alkalmazásban a `yiisoft/yii2-composer` plugin engedélyezve van. A kiterjesztés a `extra.bootstrap` bejegyzésből (`bladeknigt89\dd\Bootstrap`) magától elindul, a `config` fájlhoz nem kell hozzányúlni. A `dd()` és a `dump()` a Composer autoload után azonnal hívható.
 
