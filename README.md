@@ -1,36 +1,20 @@
 # yii2-dd
 
-Laravel's `dd()` and `dump()` for the current Yii 2, with the same calls and the same stop-and-print behavior.
+Laravel-kompatibilis `dd()` és `dump()` a Yii 2-höz. A hívás és a leállás ugyanaz, mint Laravelben: a Symfony VarDumper felülete, weben HTTP 500, utána kilépés 1-es kóddal.
 
-```php
-dd($model);
-dd($model, $request->post());
+Csomag: `bladeknigt89/yii2-dd`  
+Forrás: https://github.com/bladeknigt89/yii2-dd  
+Licenc: BSD-3-Clause
 
-dump($model);
-$order = dump($order);
-[$left, $right] = dump($left, $right);
-```
+## Követelmények
 
-`dd()` prints every value, sends **HTTP 500** on a web request when the headers are still open, then ends the process with exit code **1**. `dump()` prints the same way and returns the value, so the script keeps running. One argument is returned as itself; several arguments are returned as a list. An empty `dd()` or `dump()` prints a marker, and `dump()` returns `null`.
+- PHP 8.1 vagy újabb
+- Yii 2.0.45 vagy újabb (`yiisoft/yii2: ~2.0.45`)
+- `symfony/var-dumper` 6.4, 7 vagy 8 (a csomag behúzza)
 
-Output is the Symfony VarDumper UI that Laravel uses: an expandable HTML dump in the browser, a colored dump in the console. The file and line of the call are printed under it and linked to the editor. `VAR_DUMPER_FORMAT` (`html`, `cli`, `server`, or a `tcp://` address) is left to Symfony, as in Laravel.
+## Telepítés
 
-Yii models are shown through their attributes, validation errors, dirty values and loaded relations. Nested application, database connection, DI container and logger objects are collapsed, the same way Laravel collapses its container and database connection.
-
-## Requirements
-
-- PHP 8.1 or newer
-- Yii 2.0.45 or newer
-
-## Install
-
-```bash
-composer require bladeknigt89/yii2-dd
-```
-
-The package is a Yii extension. Yii boots it from `extra.bootstrap`, so `dd()` is ready without an application config entry.
-
-Until the package is listed on Packagist, point Composer at the repository:
+A csomag még nincs a Packagisten. A projekt `composer.json`-jába kerül a tároló, utána a require:
 
 ```json
 {
@@ -46,31 +30,143 @@ Until the package is listed on Packagist, point Composer at the repository:
 }
 ```
 
-## Component
+```bash
+composer update bladeknigt89/yii2-dd
+```
 
-Configure the component only when a default should change:
+Yii2 alkalmazásban a `yiisoft/yii2-composer` plugin engedélyezve van. A kiterjesztés a `extra.bootstrap` bejegyzésből (`bladeknigt89\dd\Bootstrap`) magától elindul, a `config` fájlhoz nem kell hozzányúlni. A `dd()` és a `dump()` a Composer autoload után azonnal hívható.
+
+Ha a plugin nem fut, a bootstrap osztály kézzel is beírható:
 
 ```php
-'components' => [
-    'dd' => [
-        'class' => \bladeknigt89\dd\Dd::class,
-        'editor' => 'vscode',
-        'maxDepth' => 3,
-        'prettyModels' => true,
-        'showSource' => true,
-    ],
+'bootstrap' => [
+    'bladeknigt89\dd\Bootstrap',
 ],
 ```
 
-`editor` accepts `phpstorm` (the default), `vscode`, `vscode-insiders`, `sublime`, `atom`, or a pattern with `{file}` and `{line}`.
+## Használat
 
-The same methods exist on the component:
+Ugyanaz a minta, mint Laravelben. Kontrollert, konzol parancsot, modellt és sima változót is így lehet kiíratni.
+
+Egy érték, aztán a script megáll:
+
+```php
+public function actionView($id)
+{
+    $model = Post::findOne($id);
+
+    dd($model);
+}
+```
+
+Több érték egymás után. A kiírásban `1`, `2`, … sorszám különbözteti meg őket:
+
+```php
+public function actionCreate()
+{
+    dd(Yii::$app->request->post(), Yii::$app->user->identity);
+}
+```
+
+A `dump()` kiír, visszaadja az értéket, és a script megy tovább. Egy argumentumnál magát az értéket adja vissza, ezért a hívás láncolható:
+
+```php
+public function actionUpdate($id)
+{
+    $model = Post::findOne($id);
+
+    dump($model)->save();
+}
+```
+
+Több argumentumnál a visszaadott érték a paraméterek listája:
+
+```php
+[$post, $user] = dump(Yii::$app->request->post(), Yii::$app->user->identity);
+```
+
+Konzol parancsban a kimenet színes szöveg a terminálon:
+
+```php
+public function actionIndex()
+{
+    dd(Customer::find()->limit(5)->all());
+}
+```
+
+Üres hívás egy jelölőt ír ki. A `dump()` ilyenkor `null`-t ad vissza, a `dd()` ezután is leáll:
+
+```php
+dd();
+dump();
+```
+
+A komponens metódusai ugyanezt csinálják:
 
 ```php
 Yii::$app->dd->dd($model);
 Yii::$app->dd->dump($model);
 ```
 
-## License
+## Mit csinál a dd()
 
-BSD-3-Clause. See [LICENSE](LICENSE).
+1. Webes kérésnél, ha a fejlécek még nincsenek elküldve, `HTTP 500`-at küld. CLI-n, `phpdbg` alatt és `embed` SAPI-n nincs státuszkód.
+2. Minden argumentumot kiír a Symfony VarDumperrel: böngészőben lenyitható HTML, konzolon színes szöveg.
+3. A hívás fájlja és sora a dump alatt jelenik meg, szerkesztő linkkel.
+4. `exit(1)` leállítja a folyamatot.
+
+A `dump()` az 1–3. lépést csinálja, és nem állítja le a scriptet.
+
+Yii `Model` és `ActiveRecord` esetén a kiírás az attribútumokat, a validációs hibákat, új rekordnál az `isNew` jelzőt, valamint a nem üres dirty mezőket, a régi attribútumokat és a már betöltött relációkat mutatja. A komponens belső esemény- és behavior listája nem kerül a dumpba. Ha egy másik érték belsejében szerepel az alkalmazás, a modul, az adatbázis-kapcsolat, a DI konténer, a logger, a cache, a session, a mutex vagy az RBAC manager, az összecsukva látszik.
+
+A `VAR_DUMPER_FORMAT` környezeti változó Symfonyé, ugyanúgy, mint Laravelben: `html`, `cli`, `server`, vagy `tcp://127.0.0.1:9912`. Ha be van állítva, a csomag nem cseréli le a Symfony kezelőjét.
+
+## Komponens
+
+Alapból a `dd` komponens a bootstrap során jön létre. Csak akkor kell a configba írni, ha egy alapértéket módosítasz:
+
+```php
+'components' => [
+    'dd' => [
+        'class' => \bladeknigt89\dd\Dd::class,
+        'editor' => 'phpstorm',
+        'showSource' => true,
+        'prettyModels' => true,
+        'basePath' => null,
+        'maxDepth' => null,
+        'maxItems' => null,
+        'maxString' => null,
+        'extraCollapse' => [],
+    ],
+],
+```
+
+| Tulajdonság | Alapérték | Jelentés |
+| --- | --- | --- |
+| `editor` | `phpstorm` | `phpstorm`, `vscode`, `vscode-insiders`, `sublime`, `atom`, vagy minta `{file}` és `{line}` helyőrzővel |
+| `showSource` | `true` | A hívás fájlja és sora a dump mellett |
+| `prettyModels` | `true` | A modellek attribútumai a komponens belső mezői helyett |
+| `basePath` | az alkalmazás `basePath` értéke | Ehhez képest rövidül a forrásútvonal |
+| `maxDepth` | Symfony alap | Hány szint legyen kinyitva |
+| `maxItems` | Symfony alap (2500) | Legfeljebb ennyi elem kerül a klónba |
+| `maxString` | Symfony alap | Szöveg levágása, `-1` esetén nincs vágás |
+| `extraCollapse` | `[]` | További osztálynevek, amelyek beágyazva összecsukódnak |
+
+Saját szerkesztő minta:
+
+```php
+'editor' => 'vscode://file/{file}:{line}',
+```
+
+## Fejlesztés
+
+```bash
+composer update
+composer test
+```
+
+A tesztekhez a PHP `dom`, `xml` és `xmlwriter` bővítménye kell, mert a PHPUnit ezeket kéri.
+
+## Licenc
+
+BSD-3-Clause. A szöveg a [LICENSE](LICENSE) fájlban van.
